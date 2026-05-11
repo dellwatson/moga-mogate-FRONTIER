@@ -1,0 +1,36 @@
+{
+  "deployment": {
+    "programId": "2QDeQr36XTQgyNs3e3F2Z1MKdcaat15QddD1axTuWKSv",
+    "programIds": {
+      "combined": "2QDeQr36XTQgyNs3e3F2Z1MKdcaat15QddD1axTuWKSv",
+      "encrypt": "FvbdeWoTjTpaS4G24Qwb2mTwWdRPryjWxwKALMB69bdF",
+      "arcium": "9k2P9Lii4QJv21G1bmsEYg9h4ZWKZkmLQaephABgyDQy"
+    },
+    "activeProgram": "combined",
+    "cluster": "devnet",
+    "rpcUrl": "https://api.devnet.solana.com",
+    "walletKeypair": "~/.config/solana/id.json",
+    "backendKeypair": ""
+  },
+  "collection": {
+    "mint": "G76JoEbDgYyChBAK9AbuSXuNS77LPZRxgVWKzrHD3ujB",
+    "name": "Mogate Giftcards",
+    "symbol": "MOGA",
+    "uri": "https://raw.githubusercontent.com/dellwatson/moga-mogate/refs/heads/master/metadata/collections/shared-1of1.json"
+  },
+  "giftcard": {
+    "to": "72MSkZygRAZvvxq623iy8xC7gNTh8x93u3ivbtrmXTnN",
+    "uri": "https://raw.githubusercontent.com/dellwatson/moga-mogate/refs/heads/master/metadata/v2-test/nfts/solana/tixia/1o1/100/metadata.json",
+    "backend": "encrypt",
+    "expiryIso": "2026-12-31T23:59:59.000Z",
+    "plaintextGiftcode": "TEST_DEMO_VOUCHER-123",
+    "unsafeDemo": true
+  },
+  "encrypt": {
+    "grpcUrl": "pre-alpha-dev-1.encrypt.ika-network.net:443",
+    "networkPublicKeyHex": "5555555555555555555555555555555555555555555555555555555555555555"
+  },
+  "arcium": {
+    "mxeProgramId": ""
+  }
+}

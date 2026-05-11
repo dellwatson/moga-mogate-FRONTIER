@@ -1,0 +1,20 @@
+{
+  "backend": {
+    "authority": "BrZ7WeDARopFAtiA3DP6c8F3eQFJnb4X8q1P5CaLQMjK"
+  },
+  "collection": {
+    "mint": "G76JoEbDgYyChBAK9AbuSXuNS77LPZRxgVWKzrHD3ujB"
+  },
+  "giftcard": {
+    "mint": "Ri52nHZEuJLiDvHSeFe8yJ5yhujAZqWh4jLMxUdo2a6",
+    "cipherRef": "giftcode_1778542037390.bin",
+    "giftcode": "TEST_DEMO_VOUCHER-123",
+    "aesKeyHex": "0x328408b6657675e859128a12b24ec6de",
+    "backend": "encrypt",
+    "keyHandleHex": "0x056264d411be4b7f6260fd2f94a569f17d13484321eade71ffee5a8c975508026d",
+    "unwrapTx": "",
+    "mintTx": "5QWZGDFd87ScvmUjdx75TRoaRM4qWtqhQ4GkGzCBEcfoFBmhHytDJrD616YUtzZZKzGXkp2AjeiWyTJaz71GikH2",
+    "cleanupTx": "",
+    "burnTx": ""
+  }
+}

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="960" height="360" viewBox="0 0 960 360" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .actor { fill:#f5f5f5; stroke:#333; stroke-width:1.5; }
+    .box { fill:#ffffff; stroke:#333; stroke-width:1.2; }
+    .arrow { stroke:#333; stroke-width:1.2; marker-end:url(#arrowhead); }
+    .text { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size:12px; fill:#111; }
+    .title { font-size:16px; font-weight:bold; }
+    .caption { font-size:11px; fill:#555; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text class="title" x="480" y="24" text-anchor="middle">Mogate Giftcard – Solana + Arcium MPC/SHE Flow (Hybrid or Pure)</text>
+
+  <!-- Lifeline actors -->
+  <!-- User / Wallet -->
+  <rect class="actor" x="40" y="50" width="140" height="30" rx="4" />
+  <text class="text" x="110" y="70" text-anchor="middle">User Wallet / DApp</text>
+  <line class="arrow" x1="110" y1="80" x2="110" y2="330" stroke-dasharray="4 4" marker-end="" />
+
+  <!-- Metaplex / NFT standard -->
+  <rect class="actor" x="240" y="50" width="150" height="30" rx="4" />
+  <text class="text" x="315" y="70" text-anchor="middle">Metaplex NFT Programs</text>
+  <line class="arrow" x1="315" y1="80" x2="315" y2="330" stroke-dasharray="4 4" marker-end="" />
+
+  <!-- Mogate giftcard program -->
+  <rect class="actor" x="455" y="50" width="170" height="30" rx="4" />
+  <text class="text" x="540" y="70" text-anchor="middle">mogate_giftcard (Solana)</text>
+  <line class="arrow" x1="540" y1="80" x2="540" y2="330" stroke-dasharray="4 4" marker-end="" />
+
+  <!-- Arcium network -->
+  <rect class="actor" x="690" y="50" width="210" height="30" rx="4" />
+  <text class="text" x="795" y="66" text-anchor="middle">Arcium Network (MXEs + MPC nodes)</text>
+  <text class="caption" x="795" y="80" text-anchor="middle">Encrypted compute via MPC + RescueCipher</text>
+  <line class="arrow" x1="795" y1="90" x2="795" y2="330" stroke-dasharray="4 4" marker-end="" />
+
+  <!-- 1. Mint NFT via Metaplex -->
+  <rect class="box" x="140" y="105" width="250" height="40" rx="4" />
+  <text class="text" x="265" y="122" text-anchor="middle">1. Mint standard NFT via Metaplex</text>
+  <text class="caption" x="265" y="137" text-anchor="middle">MOGA collection mint + metadata URI</text>
+  <line class="arrow" x1="110" y1="125" x2="240" y2="125" />
+
+  <!-- 2. Encrypt giftcode (AES+MPC or pure MPC) -->
+  <rect class="box" x="40" y="160" width="320" height="60" rx="4" />
+  <text class="text" x="200" y="178" text-anchor="middle">2. Off-chain encrypt giftcode</text>
+  <text class="caption" x="200" y="193" text-anchor="middle">Hybrid: AES-GCM(cipher_ref) + Arcium(MPC over AES key)</text>
+  <text class="caption" x="200" y="208" text-anchor="middle">Pure: Arcium confidential program over giftcode</text>
+  <line class="arrow" x1="110" y1="190" x2="540" y2="190" />
+
+  <!-- 2a. Call Arcium network to encrypt -->
+  <line class="arrow" x1="200" y1="220" x2="795" y2="220" />
+  <text class="caption" x="500" y="215" text-anchor="middle">DApp → @arcium-hq/client → MXE confidential program</text>
+
+  <!-- 3. initialize_giftcard on mogate_giftcard -->
+  <rect class="box" x="390" y="235" width="300" height="55" rx="4" />
+  <text class="text" x="540" y="252" text-anchor="middle">3. initialize_giftcard(mint, cipher_ref, backend=1, key_handle)</text>
+  <text class="caption" x="540" y="267" text-anchor="middle">Giftcard PDA stores mint, cipher_ref (optional), Arcium handle/state ID</text>
+
+  <!-- 4. Trade NFT normally -->
+  <rect class="box" x="140" y="300" width="250" height="30" rx="4" />
+  <text class="caption" x="265" y="318" text-anchor="middle">4. NFT trades as standard Metaplex NFT (OpenSea, wallets)</text>
+
+  <!-- 5. Unwrap to SBT on mogate_giftcard -->
+  <rect class="box" x="390" y="300" width="300" height="30" rx="4" />
+  <text class="caption" x="540" y="318" text-anchor="middle">5. Holder calls unwrap() → set unwrapped & freeze token account (SBT)</text>
+
+  <!-- 6. Decrypt via Arcium confidential computation -->
+  <rect class="box" x="40" y="255" width="320" height="40" rx="4" />
+  <text class="text" x="200" y="272" text-anchor="middle">6. Holder decrypts via Arcium</text>
+  <text class="caption" x="200" y="287" text-anchor="middle">DApp reads Giftcard PDA → calls Arcium to reveal AES key or giftcode</text>
+  <line class="arrow" x1="110" y1="275" x2="795" y2="275" />
+</svg>

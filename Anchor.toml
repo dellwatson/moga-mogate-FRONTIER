@@ -1,0 +1,18 @@
+[workspace]
+members = [
+  "programs/mogate_giftcard",
+  "programs/mogate_giftcard_encrypt",
+  "programs/mogate_giftcard_arcium",
+]
+
+[programs.devnet]
+mogate_giftcard = "2QDeQr36XTQgyNs3e3F2Z1MKdcaat15QddD1axTuWKSv"
+mogate_giftcard_encrypt = "FvbdeWoTjTpaS4G24Qwb2mTwWdRPryjWxwKALMB69bdF"
+mogate_giftcard_arcium = "9k2P9Lii4QJv21G1bmsEYg9h4ZWKZkmLQaephABgyDQy"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "anchor test"

@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+  "programs/mogate_giftcard",
+  "programs/mogate_giftcard_encrypt",
+  "programs/mogate_giftcard_arcium",
+]
+
+[profile.release]
+overflow-checks = true

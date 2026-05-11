@@ -1,0 +1,42 @@
+{
+  "name": "mogate-nft-giftcards-solana",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:program": "anchor build",
+    "deploy:program": "anchor deploy",
+    "init:config": "tsx scripts/steps/admin/00-init-config.ts",
+    "set:backend-authority": "tsx scripts/steps/admin/set-backend-authority.ts",
+    "set:confidential-programs": "tsx scripts/steps/admin/set-confidential-programs.ts",
+    "step1:create-collection": "tsx scripts/steps/admin/01-create-collection.ts",
+    "step2:mint:encrypt": "tsx scripts/steps/encrypt/02-mint-giftcard.ts",
+    "step2:mint:encrypt:pure": "tsx scripts/steps/encrypt/02b-mint-giftcard-pure-refhe.ts",
+    "step2:mint:arcium": "tsx scripts/steps/arcium/02-mint-giftcard.ts",
+    "step2:mint:arcium:pure": "tsx scripts/steps/arcium/02b-mint-giftcard-pure-arcium.ts",
+    "step3:unwrap": "tsx scripts/steps/redeem/03-unwrap.ts",
+    "step3:encrypt-permission": "tsx scripts/steps/encrypt/03b-copy-giftcode-permission.ts",
+    "step4:decrypt:encrypt": "tsx scripts/steps/encrypt/04-decrypt-giftcode.ts",
+    "step4:decrypt:encrypt:pure": "tsx scripts/steps/encrypt/04b-decrypt-giftcode-pure-refhe.ts",
+    "step4:decrypt:arcium": "tsx scripts/steps/arcium/04-decrypt-giftcode.ts",
+    "step4:decrypt:arcium:pure": "tsx scripts/steps/arcium/04b-decrypt-giftcode-pure-arcium.ts",
+    "cleanup:backend": "tsx scripts/steps/redeem/05-backend-cleanup.ts",
+    "burn:redeemed": "tsx scripts/steps/redeem/05-burn-redeemed.ts",
+    "burn:batch": "tsx scripts/steps/redeem/05-batch-burn.ts"
+  },
+  "dependencies": {
+    "@arcium-hq/client": "latest",
+    "@coral-xyz/anchor": "latest",
+    "@encrypt.xyz/pre-alpha-solana-client": "^0.1.1",
+    "@metaplex-foundation/js": "latest",
+    "@solana/spl-token": "latest",
+    "@solana/web3.js": "latest",
+    "dotenv": "^17.4.2",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "latest"
+  }
+}
