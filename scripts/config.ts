@@ -67,6 +67,8 @@ export type MogateGiftcardRunState = {
     aesKeyHex: string;
     backend: string;
     keyHandleHex: string;
+    holderKeyHandleHex: string;
+    encryptPermissionTx: string;
     unwrapTx: string;
     mintTx: string;
     cleanupTx: string;

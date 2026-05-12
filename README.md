@@ -57,7 +57,7 @@ do not include `https://`.
 
 The collection NFT is a Metaplex parent collection marker for wallets/marketplaces. The giftcard program does not need permission from the collection NFT.
 
-Each individual giftcard NFT mint must transfer its SPL Token freeze authority to the program PDA. The mint scripts do this automatically. That freeze authority is what lets `unwrap` make the token soulbound by freezing the holder token account.
+Each individual giftcard mint is created with its SPL Token freeze authority set to the program PDA from the start. The mint scripts also revoke mint authority after minting exactly one token. That freeze authority is what lets `unwrap` make the token soulbound by freezing the holder token account.
 
 ### Giftcode / Voucher Code
 
@@ -184,7 +184,7 @@ Arcium backend:
 bun run step2:mint:arcium
 ```
 
-This mints the NFT, transfers freeze authority to the program PDA, encrypts/stores giftcode references, initializes the giftcard PDA, and writes latest mint/cipher details into state.
+This mints one fixed-supply giftcard token to `giftcard.to`, attaches Metaplex metadata, sets freeze authority to the program PDA, encrypts/stores giftcode references, initializes the giftcard PDA, and writes latest mint/cipher details into state.
 
 ## Step 3: Unwrap
 
@@ -193,6 +193,10 @@ The holder unwraps the NFT into a soulbound giftcard:
 ```bash
 bun run step3:unwrap
 ```
+
+Run this step with the keypair that owns `giftcard.to`. If `giftcard.to` is not
+the current script wallet, update `deployment.walletKeypair` or run with the
+holder keypair before calling `step3:unwrap`.
 
 This freezes the holder token account and creates the decrypt permission PDA.
 

@@ -21,6 +21,35 @@ import { encryptUint128WithArcium } from "../../lib/arciumGiftcard.js";
 import { backendInitializeInstruction } from "../../lib/backendSignature.js";
 import { createGiftcardNftWithProgramFreezeAuthority } from "../../lib/giftcardNft.js";
 
+function requireArciumEnv(): {
+  arciumEnv: ReturnType<typeof getArciumEnv>;
+  mxeProgramId: PublicKey;
+} {
+  let arciumEnv: ReturnType<typeof getArciumEnv>;
+  try {
+    arciumEnv = getArciumEnv();
+  } catch (err) {
+    throw new Error(
+      [
+        "Arcium env is not configured. Set ARCIUM_CLUSTER_OFFSET before running step2:mint:arcium.",
+        "Example: ARCIUM_CLUSTER_OFFSET=0 bun run step2:mint:arcium",
+        err instanceof Error ? err.message : String(err),
+      ].join("\n"),
+    );
+  }
+  const mxeProgramIdRaw =
+    solGiftConfig.arcium.mxeProgramId || process.env.ARCIUM_MXE_PROGRAM_ID;
+  if (!mxeProgramIdRaw) {
+    throw new Error(
+      "Set arcium.mxeProgramId in scripts/config/mogate_giftcard.config.json or ARCIUM_MXE_PROGRAM_ID before running step2:mint:arcium.",
+    );
+  }
+  return {
+    arciumEnv,
+    mxeProgramId: new PublicKey(mxeProgramIdRaw),
+  };
+}
+
 async function encryptGiftcodeWithAes(
   giftcode: string,
 ): Promise<{ aesKeyHex: string; cipherRef: string }> {
@@ -82,6 +111,12 @@ async function main() {
 
   console.log("[step2-arcium] Minter wallet:", wallet.publicKey.toBase58());
 
+  // Validate Arcium configuration before minting. Otherwise a missing env var
+  // can leave a real NFT minted without a registered giftcard PDA.
+  const { arciumEnv, mxeProgramId } = requireArciumEnv();
+  const clusterAccount = getClusterAccAddress(arciumEnv.arciumClusterOffset);
+  console.log("Arcium cluster account:", clusterAccount.toBase58());
+
   // 1) Mint fixed-supply giftcard token and attach Metaplex metadata.
   console.log("Minting NFT giftcard with Metaplex metadata (Arcium backend)...");
   const collectionMint = new PublicKey(collection.mint);
@@ -91,6 +126,11 @@ async function main() {
   const tokenOwner = mintCfg.to
     ? new PublicKey(mintCfg.to)
     : provider.wallet.publicKey;
+  if (!tokenOwner.equals(provider.wallet.publicKey)) {
+    console.log(
+      `[step2-arcium] step3:unwrap must be signed by token owner ${tokenOwner.toBase58()}, not minter ${provider.wallet.publicKey.toBase58()}.`,
+    );
+  }
 
   const { mint } = await createGiftcardNftWithProgramFreezeAuthority({
     connection,
@@ -126,19 +166,8 @@ async function main() {
   console.log("Encrypted giftcode saved to:", cipherRef);
 
   // 4) Set up Arcium cipher (Quick Start pattern)
-  const arciumEnv = getArciumEnv();
-  const clusterAccount = getClusterAccAddress(arciumEnv.arciumClusterOffset);
-  console.log("Arcium cluster account:", clusterAccount.toBase58());
-
-  anchor.setProvider(anchor.AnchorProvider.env());
-  const anchorProvider = anchor.getProvider() as anchor.AnchorProvider;
-
-  // MXE program ID: this must be your Arcium-integrated program, NOT mogate_giftcard
-  const mxeProgramId = new PublicKey(
-    solGiftConfig.arcium.mxeProgramId ||
-      process.env.ARCIUM_MXE_PROGRAM_ID ||
-      "11111111111111111111111111111111", // placeholder
-  );
+  anchor.setProvider(provider);
+  const anchorProvider = provider;
 
   // Encrypt AES key as bigint input
   const clean = aesKeyHex.startsWith("0x") ? aesKeyHex.slice(2) : aesKeyHex;
@@ -201,6 +230,8 @@ async function main() {
     config.giftcard.decrypt.aesKeyHex = aesKeyHex;
     config.giftcard.decrypt.backend = "arcium";
     config.giftcard.decrypt.keyHandleHex = arciumHandleHex;
+    config.giftcard.decrypt.holderKeyHandleHex = "";
+    config.giftcard.decrypt.encryptPermissionTx = "";
     config.giftcard.decrypt.mintTx = txSig;
   });
 }

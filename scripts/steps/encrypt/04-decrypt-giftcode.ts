@@ -5,6 +5,7 @@ import { getGiftcardPda, getProgram, getProvider, loadKeypair } from "../../anch
 import { decryptUint128WithEncrypt } from "../../lib/encryptNetwork.js";
 import { assertDecryptPermission } from "../../lib/permissions.js";
 import { bufferToHex } from "../../lib/encoding.js";
+import { copyEncryptCiphertextForCurrentHolder } from "../../lib/encryptPermission.js";
 import { solGiftConfig } from "../../config.js";
 
 async function decryptAesKeyWithEncryptSdk(
@@ -80,12 +81,35 @@ async function main() {
   await assertDecryptPermission(mint, owner, 0);
 
   const cipherRef: string = giftcardAccount.cipherRef as string;
-  const keyHandleHex = bufferToHex(giftcardAccount.keyHandle);
+  const programKeyHandleHex = bufferToHex(giftcardAccount.keyHandle);
+  const keyHandleHex =
+    solGiftConfig.giftcard.decrypt.holderKeyHandleHex || programKeyHandleHex;
 
   console.log("cipherRef:", cipherRef);
   console.log("keyHandleHex:", keyHandleHex);
 
-  const aesKeyHex = await decryptAesKeyWithEncryptSdk(keyHandleHex);
+  let aesKeyHex: string;
+  try {
+    aesKeyHex = await decryptAesKeyWithEncryptSdk(keyHandleHex);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (
+      message.includes("PERMISSION_DENIED") &&
+      !solGiftConfig.giftcard.decrypt.holderKeyHandleHex
+    ) {
+      console.log(
+        "Encrypt denied the program-authorized ciphertext; creating holder-authorized copy...",
+      );
+      const permission = await copyEncryptCiphertextForCurrentHolder();
+      console.log("encrypt copy_ciphertext tx:", permission.txSig);
+      console.log("holder key handle:", permission.holderKeyHandleHex);
+      aesKeyHex = await decryptAesKeyWithEncryptSdk(
+        permission.holderKeyHandleHex,
+      );
+    } else {
+      throw err;
+    }
+  }
   console.log("Decrypted AES key (hex):", aesKeyHex);
 
   const giftcode = await decryptGiftcodeWithAes(aesKeyHex, cipherRef);

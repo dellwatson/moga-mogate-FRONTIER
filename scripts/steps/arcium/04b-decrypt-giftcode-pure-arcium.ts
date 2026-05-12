@@ -8,8 +8,9 @@ import { solGiftConfig } from "../../config.js";
 async function decryptGiftcodeWithArciumSdk(
   encHandleHex: string,
   mint: PublicKey,
+  provider: anchor.AnchorProvider,
 ): Promise<string> {
-  anchor.setProvider(anchor.AnchorProvider.env());
+  anchor.setProvider(provider);
   const mxeProgramId = new PublicKey(
     solGiftConfig.arcium.mxeProgramId ||
       process.env.ARCIUM_MXE_PROGRAM_ID ||
@@ -17,7 +18,7 @@ async function decryptGiftcodeWithArciumSdk(
   );
   const value = await decryptUint128WithArcium(
     encHandleHex,
-    anchor.getProvider() as anchor.AnchorProvider,
+    provider,
     mxeProgramId,
     mint,
   );
@@ -50,7 +51,11 @@ async function main() {
 
   console.log("[pure-Arcium] Encrypted giftcode handle (hex):", encHandleHex);
 
-  const giftcodePlain = await decryptGiftcodeWithArciumSdk(encHandleHex, mint);
+  const giftcodePlain = await decryptGiftcodeWithArciumSdk(
+    encHandleHex,
+    mint,
+    provider,
+  );
 
   console.log("[pure-Arcium] Decrypted giftcode (plaintext):", giftcodePlain);
 }

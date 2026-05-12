@@ -51,6 +51,11 @@ async function main() {
   const tokenOwner = mintCfg.to
     ? new PublicKey(mintCfg.to)
     : provider.wallet.publicKey;
+  if (!tokenOwner.equals(provider.wallet.publicKey)) {
+    console.log(
+      `[pure-REFHE] step3:unwrap must be signed by token owner ${tokenOwner.toBase58()}, not minter ${provider.wallet.publicKey.toBase58()}.`,
+    );
+  }
 
   const { mint } = await createGiftcardNftWithProgramFreezeAuthority({
     connection,
@@ -123,6 +128,8 @@ async function main() {
     config.giftcard.decrypt.aesKeyHex = "";
     config.giftcard.decrypt.backend = "encrypt";
     config.giftcard.decrypt.keyHandleHex = encGiftcodeHex;
+    config.giftcard.decrypt.holderKeyHandleHex = "";
+    config.giftcard.decrypt.encryptPermissionTx = "";
     config.giftcard.decrypt.mintTx = txSig;
   });
 }

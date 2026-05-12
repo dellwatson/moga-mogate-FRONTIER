@@ -6,14 +6,16 @@
     "mint": "G76JoEbDgYyChBAK9AbuSXuNS77LPZRxgVWKzrHD3ujB"
   },
   "giftcard": {
-    "mint": "Ri52nHZEuJLiDvHSeFe8yJ5yhujAZqWh4jLMxUdo2a6",
-    "cipherRef": "giftcode_1778542037390.bin",
-    "giftcode": "TEST_DEMO_VOUCHER-123",
-    "aesKeyHex": "0x328408b6657675e859128a12b24ec6de",
+    "mint": "3mmQVd6HRvWeBDXAn8JkAJiEU3hAfPofFvNBVbHXUqFD",
+    "cipherRef": "giftcode_1778613015423.bin",
+    "giftcode": "NEW-DEMO-TEST-12355",
+    "aesKeyHex": "0x10888838f3f00060386a63c145659665",
     "backend": "encrypt",
-    "keyHandleHex": "0x056264d411be4b7f6260fd2f94a569f17d13484321eade71ffee5a8c975508026d",
-    "unwrapTx": "",
-    "mintTx": "5QWZGDFd87ScvmUjdx75TRoaRM4qWtqhQ4GkGzCBEcfoFBmhHytDJrD616YUtzZZKzGXkp2AjeiWyTJaz71GikH2",
+    "keyHandleHex": "0x055a146b3de84e905d48b5b53d1d76aed6311af7c7a0ac5d54e78a8e5f78a7b07d",
+    "holderKeyHandleHex": "0x0563bdc56aa5706f2e8a95729d6082264cb2158122f9ba25d05c9691f9dde81125",
+    "encryptPermissionTx": "27nUQquNmXtJgazSyJKd3RNgaH6CWuZPLmcCt4bYcfR52L59u6PcFyWrqsjCBM1rnArRXof4JFCPAU1AL69pffPD",
+    "unwrapTx": "2JtJECTVCVt3ow5fnbwWTYvcXffWDeyKbiNL81qSvw69FDNEk6rrdcQLPszWBzHn1nuHQsBXpnu1WM9X6FTiSrQp",
+    "mintTx": "Dq4HrGrEx7swCHP4yn9kGidmSHmdpdoz5ZyEn4b9eHe7bZoSjcjvZZywFZHVi1c6pNSnQJHkLJmZXvyPruyBUG5",
     "cleanupTx": "",
     "burnTx": ""
   }

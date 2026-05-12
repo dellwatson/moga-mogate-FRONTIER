@@ -644,9 +644,12 @@ pub struct EncryptCopyGiftcodeForGrantee<'info> {
     pub decrypt_permission: Account<'info, DecryptPermission>,
     /// CHECK: Encrypt ciphertext account referenced by Giftcard.key_handle.
     pub source_ciphertext: UncheckedAccount<'info>,
-    /// CHECK: Empty/writable Encrypt ciphertext account created by the Encrypt program.
+    /// Empty Encrypt ciphertext account keypair created by the Encrypt program.
+    ///
+    /// The Encrypt copy instruction allocates this account, so the keypair must
+    /// sign the outer transaction and be forwarded as a signer in the CPI.
     #[account(mut)]
-    pub grantee_ciphertext: UncheckedAccount<'info>,
+    pub grantee_ciphertext: Signer<'info>,
     /// CHECK: Must match Config.encrypt_program and be executable.
     #[account(
         constraint = encrypt_program.key() == config.encrypt_program @ GiftcardError::InvalidConfidentialProgram,
@@ -1181,7 +1184,7 @@ fn encrypt_copy_giftcode_for_grantee_impl(
         program_id: ctx.accounts.encrypt_program.key(),
         accounts: vec![
             AccountMeta::new_readonly(ctx.accounts.source_ciphertext.key(), false),
-            AccountMeta::new(ctx.accounts.grantee_ciphertext.key(), false),
+            AccountMeta::new(ctx.accounts.grantee_ciphertext.key(), true),
             AccountMeta::new_readonly(ctx.accounts.caller_program.key(), false),
             AccountMeta::new_readonly(ctx.accounts.cpi_authority.key(), true),
             AccountMeta::new_readonly(ctx.accounts.grantee.key(), false),

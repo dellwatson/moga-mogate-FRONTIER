@@ -16,8 +16,9 @@ import { createGiftcardNftWithProgramFreezeAuthority } from "../../lib/giftcardN
 async function encryptGiftcodeWithArciumSdk(
   giftcode: string,
   mint: PublicKey,
+  provider: anchor.AnchorProvider,
 ): Promise<string> {
-  anchor.setProvider(anchor.AnchorProvider.env());
+  anchor.setProvider(provider);
   const config = solGiftConfig;
   const mxeProgramId = new PublicKey(
     config.arcium.mxeProgramId ||
@@ -26,7 +27,7 @@ async function encryptGiftcodeWithArciumSdk(
   );
   return encryptUint128WithArcium(
     encodeGiftcodeToUint128(giftcode),
-    anchor.getProvider() as anchor.AnchorProvider,
+    provider,
     mxeProgramId,
     mint,
   );
@@ -52,6 +53,11 @@ async function main() {
   const tokenOwner = mintCfg.to
     ? new PublicKey(mintCfg.to)
     : provider.wallet.publicKey;
+  if (!tokenOwner.equals(provider.wallet.publicKey)) {
+    console.log(
+      `[pure-Arcium] step3:unwrap must be signed by token owner ${tokenOwner.toBase58()}, not minter ${provider.wallet.publicKey.toBase58()}.`,
+    );
+  }
 
   const { mint } = await createGiftcardNftWithProgramFreezeAuthority({
     connection,
@@ -72,7 +78,7 @@ async function main() {
   console.log("[pure-Arcium] Giftcode (plaintext, testing only):", giftcode);
 
   // 3) Encrypt giftcode with Arcium network (confidential computation)
-  const encHandleHex = await encryptGiftcodeWithArciumSdk(giftcode, mint);
+  const encHandleHex = await encryptGiftcodeWithArciumSdk(giftcode, mint, provider);
   console.log("[pure-Arcium] Encrypted giftcode handle (hex):", encHandleHex);
 
   // 4) Store handle in Giftcard PDA (cipher_ref empty in pure mode)
@@ -122,6 +128,8 @@ async function main() {
     config.giftcard.decrypt.aesKeyHex = "";
     config.giftcard.decrypt.backend = "arcium";
     config.giftcard.decrypt.keyHandleHex = encHandleHex;
+    config.giftcard.decrypt.holderKeyHandleHex = "";
+    config.giftcard.decrypt.encryptPermissionTx = "";
     config.giftcard.decrypt.mintTx = txSig;
   });
 }

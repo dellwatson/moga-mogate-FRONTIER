@@ -64,8 +64,8 @@ async function main() {
   const cipherRef: string = giftcardAccount.cipherRef as string;
   await assertDecryptPermission(mint, provider.wallet.publicKey, 1);
 
-  anchor.setProvider(anchor.AnchorProvider.env());
-  const anchorProvider = anchor.getProvider() as anchor.AnchorProvider;
+  anchor.setProvider(provider);
+  const anchorProvider = provider;
 
   const mxeProgramId = new PublicKey(
     solGiftConfig.arcium.mxeProgramId ||
