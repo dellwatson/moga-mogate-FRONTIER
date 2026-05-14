@@ -1,11 +1,14 @@
 # Mogate Solana NFT Giftcard Steps
 
+## ⚠️ Deployment Cost Warning
+
+- **Encrypt backend**: Only requires deploying the `mogate_giftcard` program (minimal devnet SOL).
+- **Arcium backend**: Requires deploying an additional **MXE** on Solana devnet, which costs **~3 SOL** for rent and setup. This is a one-time cost per cluster offset. For testing, the Encrypt backend is cheaper and simpler.
+
 This project has two config files:
 
 - `scripts/config/mogate_giftcard.config.json`: edit this by hand before running scripts.
 - `scripts/config/mogate_giftcard.state.json`: scripts update this after each step. Do not use it as your main config.
-
-Important: the workspace now has three program surfaces: combined, Encrypt-only, and Arcium-only. Encrypt giftcards include a first-class `copy_ciphertext` access-control CPI. Arcium still needs typed `queue_computation` wiring. See `ENCRYPT_ARCIUM_INTEGRATION.md`.
 
 ## Key Concepts
 
@@ -251,3 +254,46 @@ MINTS=mint1,mint2,mint3 bun run burn:batch
 ```
 
 Production versions require backend signature approval. Unsafe demo mode skips backend signatures when `unsafeDemo` is `true`.
+
+## MXE Deployment (Arcium Only)
+
+To use the Arcium backend, you must deploy an MXE on Solana devnet first:
+
+1. Install Arcium CLI:
+
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSfL https://install.arcium.com/ | bash
+   arcup
+   ```
+
+2. Fund your devnet wallet:
+
+   ```bash
+   solana airdrop 5  # or use https://faucet.solana.com
+   ```
+
+3. Deploy MXE (costs ~3 SOL on devnet):
+
+   ```bash
+   arcium deploy \
+     --cluster-offset 456 \
+     --recovery-set-size 4 \
+     --keypair-path ~/.config/solana/id.json \
+     --rpc-url https://api.devnet.solana.com
+   ```
+
+4. Capture the printed MXE program ID and set:
+
+   ```bash
+   export ARCIUM_CLUSTER_OFFSET=456
+   export ARCIUM_MXE_PROGRAM_ID=<MXE_PROGRAM_ID>
+   ```
+
+   Or add `mxeProgramId` to `scripts/config/mogate_giftcard.config.json` under `arcium`.
+
+5. Verify:
+   ```bash
+   bun run step2:mint:arcium
+   ```
+
+This is a one-time deployment per cluster offset. The Encrypt backend does not require an MXE and is cheaper for testing.
