@@ -46,10 +46,13 @@ async function main() {
 
   const mint = new PublicKey(mintStr);
   const owner = provider.wallet.publicKey;
-  const ownerTokenAccount = await getAssociatedTokenAddress(mint, owner);
+  let ownerTokenAccount = await getAssociatedTokenAddress(mint, owner);
 
   try {
-    const tokenAccount = await getAccount(provider.connection, ownerTokenAccount);
+    const tokenAccount = await getAccount(
+      provider.connection,
+      ownerTokenAccount,
+    );
     if (tokenAccount.amount !== 1n) {
       throw new Error(
         `Current signer ATA ${ownerTokenAccount.toBase58()} holds ${tokenAccount.amount.toString()} tokens for ${mint.toBase58()}, expected 1.`,
@@ -58,17 +61,25 @@ async function main() {
   } catch (err) {
     const holder = await findLargestTokenHolder(provider.connection, mint);
     const configuredRecipient = solGiftConfig.giftcard.mint.to || "not set";
-    throw new Error(
-      [
-        `Current signer ${owner.toBase58()} does not own giftcard mint ${mint.toBase58()}.`,
-        `Expected signer ATA ${ownerTokenAccount.toBase58()} is not initialized or does not hold the NFT.`,
-        holder
-          ? `Current on-chain holder is ${holder.owner.toBase58()} at token account ${holder.tokenAccount.toBase58()}.`
-          : "Could not find a token account holding supply 1 for this mint.",
-        `Configured giftcard.to is ${configuredRecipient}. Run step3 with the holder keypair, or set giftcard.to to your signer and mint a new giftcard.`,
-        `Original token-account check: ${err instanceof Error ? err.message : String(err)}`,
-      ].join("\n"),
-    );
+
+    if (holder && holder.owner.equals(owner)) {
+      ownerTokenAccount = holder.tokenAccount;
+      console.log(
+        `Using holder token account ${ownerTokenAccount.toBase58()} for unwrap; signer matches on-chain holder.`,
+      );
+    } else {
+      throw new Error(
+        [
+          `Current signer ${owner.toBase58()} does not own giftcard mint ${mint.toBase58()}.`,
+          `Expected signer ATA ${ownerTokenAccount.toBase58()} is not initialized or does not hold the NFT.`,
+          holder
+            ? `Current on-chain holder is ${holder.owner.toBase58()} at token account ${holder.tokenAccount.toBase58()}.`
+            : "Could not find a token account holding supply 1 for this mint.",
+          `Configured giftcard.to is ${configuredRecipient}. Run step3 with the holder keypair, or set giftcard.to to your signer and mint a new giftcard.`,
+          `Original token-account check: ${err instanceof Error ? err.message : String(err)}`,
+        ].join("\n"),
+      );
+    }
   }
 
   const configPda = getConfigPda(program.programId);
@@ -81,9 +92,8 @@ async function main() {
   );
 
   const giftcardAccount = await program.account.giftcard.fetch(giftcardPda);
-  const permissionAccount = await provider.connection.getAccountInfo(
-    decryptPermissionPda,
-  );
+  const permissionAccount =
+    await provider.connection.getAccountInfo(decryptPermissionPda);
 
   if (giftcardAccount.unwrapped || permissionAccount) {
     const redeemer = giftcardAccount.redeemer?.toBase58?.() || "unknown";

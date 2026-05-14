@@ -108,6 +108,9 @@ async function main() {
   const aesKeyBigInt = aesKeyHexToBigInt(aesKeyHex);
   console.log("AES key (uint128 bigint):", aesKeyBigInt.toString());
 
+  // Program-authorized ciphertext: initial handle is owned by the
+  // Mogate giftcard program, and holder access is granted on unwrap
+  // via the on-chain Encrypt copy path.
   const keyHandleHex = await encryptAesKeyWithEncryptSdk(aesKeyHex);
   console.log("Encrypted AES key handle (hex):", keyHandleHex);
 

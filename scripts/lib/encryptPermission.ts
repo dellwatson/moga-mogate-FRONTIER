@@ -15,6 +15,7 @@ import {
 
 const ENCRYPT_PRE_ALPHA_PROGRAM_ID =
   "4ebfzWdKnrnGseuQpezXdG8yCdHqwQ1SSBHD3bWArND8";
+// Must match ENCRYPT_CPI_AUTHORITY_SEED in the on-chain program (b"__encrypt_cpi_authority")
 const ENCRYPT_CPI_AUTHORITY_SEED = "__encrypt_cpi_authority";
 
 function keyHandleToPublicKey(keyHandleHex: string): PublicKey {

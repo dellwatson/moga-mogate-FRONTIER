@@ -6,10 +6,31 @@ use anchor_lang::solana_program::{
     instruction::{AccountMeta, Instruction},
     program::{invoke, invoke_signed},
 };
-use anchor_spl::token::{self, Burn, FreezeAccount, Mint, ThawAccount, Token, TokenAccount};
+use anchor_spl::token::{self, spl_token::instruction::AuthorityType, Burn, FreezeAccount, Mint, ThawAccount, Token, TokenAccount};
+use anchor_spl::associated_token::AssociatedToken;
 use std::convert::TryInto;
 
-declare_id!("2QDeQr36XTQgyNs3e3F2Z1MKdcaat15QddD1axTuWKSv");
+declare_id!("7QLZYHojQdUAjfTMMzsa7zDADsJHFDYho1DJqttaL57x");
+
+// Encrypt program ID (Encrypt pre-alpha on devnet)
+pub const ENCRYPT_PRE_ALPHA_PROGRAM_ID: Pubkey =
+    pubkey!("4ebfzWdKnrnGseuQpezXdG8yCdHqwQ1SSBHD3bWArND8");
+
+// Authorization domain constants
+const INIT_AUTH_DOMAIN: &[u8] = b"MOGATE_INIT";
+const CLEANUP_AUTH_DOMAIN: &[u8] = b"MOGATE_CLEANUP";
+const BURN_AUTH_DOMAIN: &[u8] = b"MOGATE_BURN";
+const BATCH_BURN_AUTH_DOMAIN: &[u8] = b"MOGATE_BATCH_BURN";
+const CHECKOUT_AUTH_DOMAIN: &[u8] = b"MOGATE_CHECKOUT";
+
+// Encrypt CPI authority seed (must match Encrypt integration expectations)
+const ENCRYPT_CPI_AUTHORITY_SEED: &[u8] = b"__encrypt_cpi_authority";
+
+// Ed25519 signature constants
+const SIGNATURE_LEN: usize = 64;
+const PUBKEY_LEN: usize = 32;
+const CURRENT_INSTRUCTION: u16 = 0;
+const OFFSETS_START: usize = 2;
 
 #[program]
 pub mod mogate_giftcard {
@@ -19,13 +40,16 @@ pub mod mogate_giftcard {
     ///
     /// The config owner is the administrative authority. The backend authority
     /// is the signer whose Ed25519 approvals authorize production init/burn.
+    /// The gateway authority is the contract that can call gateway_mint_giftcard.
     pub fn initialize_config(
         ctx: Context<InitializeConfig>,
         backend_authority: Pubkey,
+        gateway_authority: Pubkey,
     ) -> Result<()> {
         let config = &mut ctx.accounts.config;
         config.owner = ctx.accounts.owner.key();
         config.backend_authority = backend_authority;
+        config.gateway_authority = gateway_authority;
         config.encrypt_program = ENCRYPT_PRE_ALPHA_PROGRAM_ID;
         config.arcium_program = Pubkey::default();
         Ok(())
@@ -67,6 +91,145 @@ pub mod mogate_giftcard {
         Ok(())
     }
 
+    /// Public unsafe checkout (dev-only). No backend signature required.
+    ///
+    /// This mints a giftcard and initializes it atomically without any
+    /// signature verification. Use for local/devnet testing only.
+    pub fn unsafe_checkout(
+        ctx: Context<CheckoutGiftcard>,
+        recipient: Pubkey,
+        metadata_uri: String,
+        name: String,
+        symbol: String,
+        collection_mint: Pubkey,
+        cipher_ref: String,
+        backend: u8,
+        key_handle: Vec<u8>,
+    ) -> Result<()> {
+        mint_and_initialize_giftcard_impl(
+            ctx,
+            recipient,
+            metadata_uri,
+            name,
+            symbol,
+            collection_mint,
+            cipher_ref,
+            backend,
+            key_handle,
+        )
+    }
+
+    /// Public safe checkout. Requires a valid backend signature.
+    ///
+    /// Callers must include a prior Ed25519 verification instruction
+    /// signed by `config.backend_authority`. The signed message binds:
+    /// - recipient, metadata_uri, name, symbol, collection_mint
+    /// - cipher_ref, backend, key_handle
+    /// - this program and config.
+    pub fn checkout(
+        ctx: Context<CheckoutGiftcard>,
+        recipient: Pubkey,
+        metadata_uri: String,
+        name: String,
+        symbol: String,
+        collection_mint: Pubkey,
+        cipher_ref: String,
+        backend: u8,
+        key_handle: Vec<u8>,
+    ) -> Result<()> {
+        // Verify backend signature
+        let auth_message = build_checkout_message(
+            ctx.program_id,
+            ctx.accounts.config.key(),
+            &recipient,
+            &metadata_uri,
+            &name,
+            &symbol,
+            &collection_mint,
+            backend,
+            &cipher_ref,
+            &key_handle,
+        )?;
+        require_backend_signature(
+            &ctx.accounts.instructions.to_account_info(),
+            &ctx.accounts.config.backend_authority,
+            &auth_message,
+        )?;
+
+        mint_and_initialize_giftcard_impl(
+            ctx,
+            recipient,
+            metadata_uri,
+            name,
+            symbol,
+            collection_mint,
+            cipher_ref,
+            backend,
+            key_handle,
+        )
+    }
+
+    /// Internal helper: mint 1 token, revoke mint authority, and initialize giftcard state.
+    ///
+    /// This function assumes all necessary checks (including backend signature)
+    /// have already been performed by the calling public instruction.
+    pub(crate) fn mint_and_initialize_giftcard_impl(
+        ctx: Context<CheckoutGiftcard>,
+        _recipient: Pubkey,
+        _metadata_uri: String,
+        _name: String,
+        _symbol: String,
+        _collection_mint: Pubkey,
+        cipher_ref: String,
+        backend: u8,
+        key_handle: Vec<u8>,
+    ) -> Result<()> {
+        require!(
+            backend <= Backend::Arcium as u8,
+            GiftcardError::InvalidBackend
+        );
+
+        let mint = &ctx.accounts.mint;
+        let payer = &ctx.accounts.payer;
+
+        // Mint 1 token to the owner's token account
+        let cpi_ctx = CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            token::MintTo {
+                mint: mint.to_account_info(),
+                to: ctx.accounts.token_account.to_account_info(),
+                authority: payer.to_account_info(),
+            },
+        );
+        token::mint_to(cpi_ctx, 1)?;
+
+        // Revoke mint authority (make supply fixed)
+        let cpi_ctx = CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            token::SetAuthority {
+                account_or_mint: mint.to_account_info(),
+                current_authority: payer.to_account_info(),
+            },
+        );
+        token::set_authority(cpi_ctx, AuthorityType::MintTokens, None)?;
+
+        // Initialize giftcard state (same checks as initialize_giftcard)
+        initialize_giftcard_state(
+            &mut ctx.accounts.giftcard,
+            &ctx.accounts.config,
+            &ctx.accounts.mint,
+            &ctx.accounts.freeze_authority,
+            payer.key(),
+            cipher_ref.clone(),
+            backend,
+            key_handle.clone(),
+        )?;
+
+        Ok(())
+    }
+
+    
+    
     /// Registers an already minted NFT as a Mogate giftcard.
     ///
     /// The SPL mint must have its freeze authority set to this program's
@@ -438,6 +601,152 @@ pub struct SetConfidentialPrograms<'info> {
 }
 
 #[derive(Accounts)]
+pub struct MintAndInitializeGiftcard<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub token_owner: SystemAccount<'info>,
+    #[account(
+        init,
+        payer = payer,
+        mint::decimals = 0,
+        mint::authority = payer,
+        mint::freeze_authority = freeze_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(
+        init,
+        payer = payer,
+        token::mint = mint,
+        token::authority = token_owner,
+    )]
+    pub token_account: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + Giftcard::MAX_SIZE,
+        seeds = [b"giftcard", mint.key().as_ref()],
+        bump
+    )]
+    pub giftcard: Account<'info, Giftcard>,
+    #[account(seeds = [b"config"], bump)]
+    pub config: Account<'info, Config>,
+    /// CHECK: PDA used only as a program signer for SPL Token freeze authority.
+    #[account(
+        seeds = [b"freeze_authority"],
+        bump
+    )]
+    pub freeze_authority: UncheckedAccount<'info>,
+    /// CHECK: Metaplex Token Metadata program.
+    pub metadata_program: UncheckedAccount<'info>,
+    /// CHECK: Solana instructions sysvar used for backend signature verification.
+    #[account(address = INSTRUCTIONS_ID)]
+    pub instructions: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+pub struct CheckoutGiftcard<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub token_owner: SystemAccount<'info>,
+    #[account(
+        init,
+        payer = payer,
+        mint::decimals = 0,
+        mint::authority = payer,
+        mint::freeze_authority = freeze_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(
+        init,
+        payer = payer,
+        token::mint = mint,
+        token::authority = token_owner,
+    )]
+    pub token_account: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + Giftcard::MAX_SIZE,
+        seeds = [b"giftcard", mint.key().as_ref()],
+        bump
+    )]
+    pub giftcard: Account<'info, Giftcard>,
+    #[account(seeds = [b"config"], bump)]
+    pub config: Account<'info, Config>,
+    /// CHECK: PDA used only as a program signer for SPL Token freeze authority.
+    #[account(
+        seeds = [b"freeze_authority"],
+        bump
+    )]
+    pub freeze_authority: UncheckedAccount<'info>,
+    /// CHECK: Metaplex Token Metadata program.
+    pub metadata_program: UncheckedAccount<'info>,
+    /// CHECK: Solana instructions sysvar used for backend signature verification.
+    #[account(address = INSTRUCTIONS_ID)]
+    pub instructions: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+pub struct GatewayMintGiftcard<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub token_owner: SystemAccount<'info>,
+    #[account(
+        init,
+        payer = payer,
+        mint::decimals = 0,
+        mint::authority = payer,
+        mint::freeze_authority = freeze_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(
+        init,
+        payer = payer,
+        token::mint = mint,
+        token::authority = token_owner,
+    )]
+    pub token_account: Account<'info, TokenAccount>,
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + Giftcard::MAX_SIZE,
+        seeds = [b"giftcard", mint.key().as_ref()],
+        bump
+    )]
+    pub giftcard: Account<'info, Giftcard>,
+    #[account(seeds = [b"config"], bump)]
+    pub config: Account<'info, Config>,
+    /// CHECK: PDA used only as a program signer for SPL Token freeze authority.
+    #[account(
+        seeds = [b"freeze_authority"],
+        bump
+    )]
+    pub freeze_authority: UncheckedAccount<'info>,
+    /// CHECK: Metaplex Token Metadata program.
+    pub metadata_program: UncheckedAccount<'info>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+pub struct SetGatewayAuthority<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(mut, seeds = [b"config"], bump)]
+    pub config: Account<'info, Config>,
+}
+
+#[derive(Accounts)]
 pub struct InitializeGiftcard<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -675,12 +984,13 @@ pub struct EncryptCopyGiftcodeForGrantee<'info> {
 pub struct Config {
     pub owner: Pubkey,
     pub backend_authority: Pubkey,
+    pub gateway_authority: Pubkey,
     pub encrypt_program: Pubkey,
     pub arcium_program: Pubkey,
 }
 
 impl Config {
-    pub const MAX_SIZE: usize = 32 + 32 + 32 + 32;
+    pub const MAX_SIZE: usize = 32 + 32 + 32 + 32 + 32;
 }
 
 #[account]
@@ -749,14 +1059,7 @@ pub struct GiftcardBurned {
     pub authority: Pubkey,
 }
 
-const INIT_AUTH_DOMAIN: &[u8] = b"MOGATE_GIFTCARD_INIT_V1";
-const CLEANUP_AUTH_DOMAIN: &[u8] = b"MOGATE_GIFTCARD_CLEANUP_V1";
-const BURN_AUTH_DOMAIN: &[u8] = b"MOGATE_GIFTCARD_BURN_V1";
-const BATCH_BURN_AUTH_DOMAIN: &[u8] = b"MOGATE_GIFTCARD_BATCH_BURN_V1";
 const ED25519_PROGRAM_ID: Pubkey = pubkey!("Ed25519SigVerify111111111111111111111111111");
-const ENCRYPT_PRE_ALPHA_PROGRAM_ID: Pubkey =
-    pubkey!("4ebfzWdKnrnGseuQpezXdG8yCdHqwQ1SSBHD3bWArND8");
-const ENCRYPT_CPI_AUTHORITY_SEED: &[u8] = b"__encrypt_cpi_authority";
 const ENCRYPT_IX_COPY_CIPHERTEXT: u8 = 8;
 
 fn initialize_giftcard_state<'info>(
@@ -810,6 +1113,35 @@ fn build_initialize_message(
     message.extend_from_slice(program_id.as_ref());
     message.extend_from_slice(config.as_ref());
     message.extend_from_slice(mint.as_ref());
+    message.push(backend);
+    append_auth_bytes(&mut message, cipher_ref.as_bytes())?;
+    append_auth_bytes(&mut message, key_handle)?;
+    Ok(message)
+}
+
+fn build_checkout_message(
+    program_id: &Pubkey,
+    config: Pubkey,
+    recipient: &Pubkey,
+    metadata_uri: &str,
+    name: &str,
+    symbol: &str,
+    collection_mint: &Pubkey,
+    backend: u8,
+    cipher_ref: &str,
+    key_handle: &[u8],
+) -> Result<Vec<u8>> {
+    let mut message = Vec::with_capacity(
+        CHECKOUT_AUTH_DOMAIN.len() + 32 + 32 + 32 + 2 + metadata_uri.len() + 2 + name.len() + 2 + symbol.len() + 32 + 1 + 2 + cipher_ref.len() + 2 + key_handle.len(),
+    );
+    message.extend_from_slice(CHECKOUT_AUTH_DOMAIN);
+    message.extend_from_slice(program_id.as_ref());
+    message.extend_from_slice(config.as_ref());
+    message.extend_from_slice(recipient.as_ref());
+    append_auth_bytes(&mut message, metadata_uri.as_bytes())?;
+    append_auth_bytes(&mut message, name.as_bytes())?;
+    append_auth_bytes(&mut message, symbol.as_bytes())?;
+    message.extend_from_slice(collection_mint.as_ref());
     message.push(backend);
     append_auth_bytes(&mut message, cipher_ref.as_bytes())?;
     append_auth_bytes(&mut message, key_handle)?;
@@ -1272,6 +1604,7 @@ pub enum GiftcardError {
     NotOwner,
     InvalidBackend,
     Unauthorized,
+    UnauthorizedGateway,
     FreezeAuthorityMismatch,
     InvalidConfig,
     InvalidMint,

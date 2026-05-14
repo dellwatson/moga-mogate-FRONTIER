@@ -1,5 +1,10 @@
 import { SystemProgram } from "@solana/web3.js";
-import { getConfigPda, getProgram, getProvider, loadBackendKeypair } from "../../anchorClient.js";
+import {
+  getConfigPda,
+  getProgram,
+  getProvider,
+  loadBackendKeypair,
+} from "../../anchorClient.js";
 import { updateSolGiftConfig } from "../../config.js";
 
 async function main() {
@@ -9,7 +14,7 @@ async function main() {
   const backendAuthority = loadBackendKeypair().publicKey;
 
   const txSig = await program.methods
-    .initializeConfig(backendAuthority)
+    .initializeConfig(backendAuthority, backendAuthority) // Use same for both for now
     .accountsStrict({
       owner: provider.wallet.publicKey,
       config,

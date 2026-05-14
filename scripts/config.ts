@@ -42,7 +42,13 @@ export type MogateGiftcardProjectConfig = {
     backend: "encrypt" | "arcium" | string;
     expiryIso: string;
     plaintextGiftcode: string;
-    unsafeDemo: boolean;
+  };
+  checkout: {
+    payment: {
+      amount: number;
+      token: string | null;
+    };
+    signature: string;
   };
   encrypt: {
     grpcUrl: string;
@@ -88,6 +94,7 @@ export type SolGiftConfig = {
     mint: MogateGiftcardProjectConfig["giftcard"];
     decrypt: MogateGiftcardRunState["giftcard"];
   };
+  checkout: MogateGiftcardProjectConfig["checkout"];
   encrypt: MogateGiftcardProjectConfig["encrypt"];
   arcium: MogateGiftcardProjectConfig["arcium"];
 };
@@ -130,6 +137,7 @@ export function loadSolGiftConfig(): SolGiftConfig {
       mint: project.giftcard,
       decrypt: state.giftcard,
     },
+    checkout: project.checkout,
     encrypt: project.encrypt,
     arcium: project.arcium,
   };

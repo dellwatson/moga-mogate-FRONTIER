@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import * as path from "node:path";
 import { PublicKey } from "@solana/web3.js";
-import { getGiftcardPda, getProgram, getProvider, loadKeypair } from "../../anchorClient.js";
+import {
+  getGiftcardPda,
+  getProgram,
+  getProvider,
+  loadKeypair,
+} from "../../anchorClient.js";
 import { decryptUint128WithEncrypt } from "../../lib/encryptNetwork.js";
 import { assertDecryptPermission } from "../../lib/permissions.js";
 import { bufferToHex } from "../../lib/encoding.js";
@@ -32,10 +37,23 @@ async function decryptGiftcodeWithAes(
     aesKeyBytes[i] = parseInt(clean.substr(i * 2, 2), 16);
   }
 
-  const filePath = path.isAbsolute(cipherRef)
+  const baseDir = path.dirname(new URL(import.meta.url).pathname);
+  const primaryPath = path.isAbsolute(cipherRef)
     ? cipherRef
-    : path.join(path.dirname(new URL(import.meta.url).pathname), cipherRef);
-  const encryptedData = await fs.promises.readFile(filePath);
+    : path.join(baseDir, cipherRef);
+
+  let encryptedData: Buffer;
+  try {
+    encryptedData = await fs.promises.readFile(primaryPath);
+  } catch (err: any) {
+    if (!path.isAbsolute(cipherRef)) {
+      // Fallback to the project-level scripts/data directory
+      const altPath = path.join(baseDir, "..", "..", "data", cipherRef);
+      encryptedData = await fs.promises.readFile(altPath);
+    } else {
+      throw err;
+    }
+  }
 
   const iv = encryptedData.subarray(0, 12);
   const ciphertext = encryptedData.subarray(12);

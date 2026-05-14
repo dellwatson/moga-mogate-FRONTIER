@@ -1,8 +1,8 @@
 {
   "deployment": {
-    "programId": "2QDeQr36XTQgyNs3e3F2Z1MKdcaat15QddD1axTuWKSv",
+    "programId": "7QLZYHojQdUAjfTMMzsa7zDADsJHFDYho1DJqttaL57x",
     "programIds": {
-      "combined": "2QDeQr36XTQgyNs3e3F2Z1MKdcaat15QddD1axTuWKSv",
+      "combined": "7QLZYHojQdUAjfTMMzsa7zDADsJHFDYho1DJqttaL57x",
       "encrypt": "FvbdeWoTjTpaS4G24Qwb2mTwWdRPryjWxwKALMB69bdF",
       "arcium": "9k2P9Lii4QJv21G1bmsEYg9h4ZWKZkmLQaephABgyDQy"
     },
@@ -10,7 +10,7 @@
     "cluster": "devnet",
     "rpcUrl": "https://api.devnet.solana.com",
     "walletKeypair": "~/.config/solana/id.json",
-    "backendKeypair": ""
+    "backendKeypair": "backend-authority.json"
   },
   "collection": {
     "mint": "G76JoEbDgYyChBAK9AbuSXuNS77LPZRxgVWKzrHD3ujB",
@@ -23,8 +23,15 @@
     "uri": "https://raw.githubusercontent.com/dellwatson/moga-mogate/refs/heads/master/metadata/v2-test/nfts/solana/tixia/1o1/100/metadata.json",
     "backend": "encrypt",
     "expiryIso": "2026-12-31T23:59:59.000Z",
-    "plaintextGiftcode": "NEW-DEMO-TEST-12355",
+    "plaintextGiftcode": "ATOMIC-new-test-N123EW-DEMO-TEST-12355",
     "unsafeDemo": true
+  },
+  "checkout": {
+    "payment": {
+      "amount": 0.023,
+      "token": null
+    },
+    "signature": ""
   },
   "encrypt": {
     "grpcUrl": "pre-alpha-dev-1.encrypt.ika-network.net:443",

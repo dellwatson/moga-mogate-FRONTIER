@@ -12,6 +12,7 @@
     "step1:create-collection": "tsx scripts/steps/admin/01-create-collection.ts",
     "step2:mint:encrypt": "tsx scripts/steps/encrypt/02-mint-giftcard.ts",
     "step2:mint:encrypt:pure": "tsx scripts/steps/encrypt/02b-mint-giftcard-pure-refhe.ts",
+    "step2:checkout:encrypt": "tsx scripts/steps/encrypt/02-checkout-mint-giftcard.ts",
     "step2:mint:arcium": "tsx scripts/steps/arcium/02-mint-giftcard.ts",
     "step2:mint:arcium:pure": "tsx scripts/steps/arcium/02b-mint-giftcard-pure-arcium.ts",
     "step3:unwrap": "tsx scripts/steps/redeem/03-unwrap.ts",
